@@ -157,7 +157,7 @@ class IsingModel:
                 -4.0: float(np.exp(-beta*(-4.0))),
                 -8.0: float(np.exp(-beta*(-8.0)))
             }
-            print(Boltzmann_factors)
+            
             for _ in range(num_samples):
                 if self.boundary_condition != 'helical':
                     raise NotImplementedError
@@ -170,7 +170,6 @@ class IsingModel:
                         # accept the spin flip, so we multiply the selected spin with -1
                         spins[i] = spins[i]*(-1)
                         E_new = energies[-1]+delta_E
-                        print(type(E_new))
                         energies.append(float(E_new))
                     else:
                         # add previous energy value again
@@ -180,7 +179,6 @@ class IsingModel:
                     # Accept the spin flip
                     spins[i] = spins[i]*(-1)
                     E_new = energies[-1]+delta_E
-                    print
                     energies.append(float(E_new))
             return energies
 
@@ -195,7 +193,9 @@ class IsingModel:
                 beta = 1/(self.kB*self.T)
                 E = self.calculate_energy(spins)
                 r = np.random.uniform(0, 1, 1)
+                
                 Boltzmann_factor = np.exp(-beta*(E-ground_state))
+                print('r = ', r, ' .       Boltzmann factor = ', Boltzmann_factor)
                 if r <= Boltzmann_factor:
                     energies.append(E)
             return energies
@@ -391,7 +391,6 @@ class IsingModel:
         M = []
         N2= self.size**2
         for k in range(len(spins)):
-            print('shape of element in spin_samples: ', spins[k].shape, type(spins[k]))
             M_sample = 1/N2*np.sum(spins[k])
             M.append(M_sample)
         return np.asarray(M)
@@ -429,7 +428,8 @@ class IsingModel:
 
         N = self.size
         N2 = self.size**2
-        num_samples = num_sweeps*N2
+        num_samples = int(num_sweeps*N2)
+        print(num_samples)
         M_exact = self.get_exact_magnetization()
         magnetizations = np.zeros(num_samples)
         sweeps = np.linspace(0, num_samples, num_samples)/N2
@@ -460,6 +460,7 @@ class IsingModel:
         subtitle = 'T = '+str(self.T)+' , N = ' + str(self.size)
         ax.set_title(subtitle, fontsize=17)
         ax.legend()
+        fig.savefig('Plots/magnetization_'+str(chains)+'_chains.png', dpi=300)
         plt.show()
     
     def autocorrelation(self, t, tau_eq, magnetizations):
@@ -478,7 +479,10 @@ class IsingModel:
         average_m = np.sum(magnetizations)/len(magnetizations)
         tf = len(magnetizations)
         chi = 0
-        for s in range(tau_eq, tf):
+        print('tau_eq = ', tau_eq)
+        print('tf = ', tf)
+        for s in range(tau_eq, tf-2, 1):
+            print('s = ',s)
             chi += (magnetizations[s]-average_m)*(magnetizations[s+t]-average_m)
         chi = chi/tf
         return chi
