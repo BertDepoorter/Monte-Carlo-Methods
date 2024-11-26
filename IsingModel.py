@@ -318,7 +318,7 @@ class IsingModel:
                 ax.hist(energies, bins=bins)
                 ax.set_ylabel('Counts', fontsize=14)
             if normalize == True:
-                ax.hist(energies_norm, bins=bins, density=True)
+                ax.hist(energies, bins=bins, density=True)
                 mu = np.sum(energies)/len(energies)
                 sigma = np.std(energies)
                 energy_min = np.min(energies)
@@ -337,15 +337,16 @@ class IsingModel:
         Function to calculate the total magnetization of a certain configuration of spins
 
         input:
-        - spins (array): array containing all the generated spins
+        - spins (array): array containing all the generated spin configurations
 
         output:
-        - Total magnetization of the spin configuration
+        - Total magnetization of each of the spin configurations
         '''
-        M = []
+        M = np.zeros(len(spins))
         N2= self.size**2
-        for spin_conf in spins:
-            M_sample = 1/N2*np.sum(spin_conf)
+        for k in range(len(spins)):
+            print('shape of element in spin_samples: ', spins[k].shape, type(spins[k]))
+            M_sample = 1/N2*np.sum(spins[k])
             M.append(M_sample)
         return M
 
@@ -364,12 +365,13 @@ class IsingModel:
         M = (1-np.sinh(2*self.J/self.T)**(-4))**(1/8)
         return M
 
-    def plot_magnetization(self, num_sweeps, spins=[]):
+    def plot_magnetization(self, num_sweeps, chains=1, spins=[]):
         '''
         Function that creates plot like fig 3 in the lecture notes
 
         input:
         - num_sweeps (int): number of spin MC steps to take (in sweeps!!) 
+        - chains (int): how many Monte Carlo chains we run. Each chain has the same number of sweeps
         - spins (list, optional): if we have list of generated spin configurations, we can skip the generation of the spin lattices
 
         output: 
@@ -384,22 +386,52 @@ class IsingModel:
         num_samples = num_sweeps*N2
         M_exact = self.get_exact_magnetization()
         magnetizations = np.zeros(num_samples)
+        sweeps = np.linspace(0, num_samples, num_samples)/N2
+        
+        # Create figure instances
+        fig, ax = plt.subplots(1,1, figsize=(10, 7))
+        
         if spins == []:
-            # generate num_samples spin configurations with desired algorithm
-            samples = self.sample_spin_configurations(num_samples)[1:]
-            magnetizations = np.add(magnetizations, self.get_magnetization(samples))
+            # run several chains
+            for i in range(chains):
+                # generate num_samples spin configurations with desired algorithm
+                samples = self.sample_spin_configurations(num_samples)[1:]
+                magnetizations = np.add(magnetizations, self.get_magnetization(samples))
+                lab = 'Sampled magnetizations, chain '+str(i+1)
+                ax.plot(sweeps, magnetizations, alpha=0.7, label=lab)
+                magnetizations = np.zeros(num_samples)
         else:
             # calculate magnetizatio for each of the given spin configurations
             magnetizations = np.add(magnetizations, self.get_magnetization(spins))
-        fig, ax = plt.subplots(1,1, figsize=(10, 7))
-        sweeps = np.linspace(0, num_samples, num_samples)/N2
-        ax.plot(sweeps, magnetizations, color='red', alpha=0.7, label='Sampled magnetizations')
+            ax.plot(sweeps, magnetizations, color='red', alpha=0.7, label='Sampled magnetizations')
+
         ax.axhline(M_exact, color='black', alpha=0.7, linestyle='dashed', label='Exact Magnetization')
         print(M_exact)
-        ax.set_xlabel('Sweeps', fontsize=14)
+        ax.set_xlabel('Number of MC sweeps', fontsize=14)
         ax.set_ylabel('Magnetization', fontsize=14)
         fig.suptitle('Metropolis algorithm', fontsize=20)
         subtitle = 'T = '+str(self.T)+' , N = ' + str(self.size)
         ax.set_title(subtitle, fontsize=17)
         ax.legend()
         plt.show()
+    
+    def autocorrelation(self, t, tau_eq, magnetizations):
+        '''
+        calculates the autocorrelation function for some time t>tau_eq. 
+
+        input:
+        - t (int): index of MC step at which we want to know the autocorrelation function
+        - tau_eq (int): index of MC step at which system has equilibrated. 
+            Should be estimated from the plot of the magnetizations
+        - magnetizations (list): list with all magnetization values
+
+        output:
+        - autocorrelation function as defined in eq 100 of lecture notes
+        '''
+        average_m = np.sum(magnetizations)/len(magnetizations)
+        tf = len(magnetizations)
+        chi = 0
+        for s in range(tau_eq, tf):
+            chi += (magnetizations[s]-average_m)*(magnetizations[s+t]-average_m)
+        chi = chi/tf
+        return chi
