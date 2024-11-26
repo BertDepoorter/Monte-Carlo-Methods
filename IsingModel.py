@@ -481,7 +481,7 @@ class IsingModel:
         chi = 0
         print('tau_eq = ', tau_eq)
         print('tf = ', tf)
-        for s in range(tau_eq, tf-2, 1):
+        for s in range(tau_eq, tf-t, 1):
             print('s = ',s)
             chi += (magnetizations[s]-average_m)*(magnetizations[s+t]-average_m)
         chi = chi/tf
