@@ -179,6 +179,67 @@ class IsingModel:
                 Boltzmann_factor = np.exp(-beta*(E-ground_state))
                 if r <= Boltzmann_factor:
                     energies.append(E)
+            return energies
+
+    def sample_spin_configurations(self, num_samples):
+        """
+        Sample spin configurations and return these as a 2D array.
+        
+        Parameters:
+        - num_samples (int): Number of random configurations to sample.
+        
+        Returns:
+        - spins (list of arrays): sampled spin configurations.
+        """
+
+        if self.sampling_method != "uniform" or 'metropolis' or 'hit and miss':
+            raise NotImplementedError(f"Sampling method '{self.sampling_method}' is not implemented.")
+
+        # Implement uniform sampling method
+        if self.sampling_method == 'uniform':
+            spins_sampled = np.asarray([])
+            for _ in range(num_samples):
+                spins = self.initialize_spins()
+                spins_sampled = np.vstack([spins_sampled, spins])
+            return spins_sampled
+
+        # Implement Metropolis algorithm 
+        elif self.sampling_method == 'metropolis':
+            spins_sampled = np.asarray([])
+            spins = self.initialize_spins()
+            for _ in range(num_samples):
+                if self.boundary_condition != 'helical':
+                    raise NotImplementedError
+                i = np.random.randint(0, self.size**2, 1)
+                E_old = self.calculate_energy(spins)
+                spins[i] = spins[i]*(-1)
+                E_new = self.calculate_energy(spins)
+                delta_E = E_new - E_old
+                if delta_E >0:
+                    r = np.random.uniform(0,1, 1)
+                    beta = 1/(self.kB*self.T)
+                    Boltzmann_factor = np.exp(-beta*delta_E)
+                    if r > Boltzmann_factor:
+                        # flip the spin at place i again.
+                        spins[i] = spins[i]*(-1)
+                spins_sampled = np.vstack([spins_sampled, spins])
+            return spins_sampled
+
+        elif self.sampling_method == 'hit and miss':
+            spins_sampled = np.vstack([])
+            N = self.size
+            N2 = self.size**2
+            ground_state = -2*N2
+            
+            for _ in range(num_samples):
+                spins = self.initialize_spins()
+                beta = 1/(self.kB*self.T)
+                E = self.calculate_energy(spins)
+                r = np.random.uniform(0, 1, 1)
+                Boltzmann_factor = np.exp(-beta*(E-ground_state))
+                if r <= Boltzmann_factor:
+                    spins_sampled = np.vstack([spins_sampled, spins])
+            return spins_sampled
 
 
     def energy_normalized(self, energies):
@@ -226,7 +287,7 @@ class IsingModel:
                 If True, we also plot gaussian distribution arond mean of samples 
         
         Output:
-        - figure
+        - histogram of the sampled energies
         '''
         
         fig, ax = plt.subplots(1,1, figsize=(8,6))
@@ -235,8 +296,56 @@ class IsingModel:
             ax.hist(energies, bins=bins)
         if normalize == True:
             energies_norm = self.energy_normalized(energies)
-            ax.hist(energies, bins=bins)
+            ax.hist(energies_norm, bins=bins)
+            mu = 
             ax.setylabel('Normalized counts', fontsize=14)
         ax.set_xlabel('Sampled energy [ J ]')
         ax.set_ylabel('Counts', fontsize=14)
         ax.set_title(title, fontsize=1)
+
+    def get_magnetization(self, spins):
+        '''
+        Function to calculate the total magnetization of a certain configuration of spins
+
+        input:
+        - spins (array): array containing all the generated spins
+
+        output:
+        - Total magnetization of the spin configuration
+        '''
+        N2= self.size**2
+        M = 1/N2*np.sum(spins)
+        return M
+
+    def get_exact_magnetization(self):
+        '''
+        Function that returns the exact magnetization for the Ising model with a certain temperature and J value
+        This has been computed analytically.
+
+        input:
+        - self: only J, T are needed
+
+        output:
+        - exact magnetization value
+        '''
+
+        M = np.sqrt(np.sqrt(np.sqrt(1-np.sinh(2*self.J/self.T)**(-4))))
+        return M
+
+    def plot_magnetization(self, num_sweeps, spins=[]):
+        '''
+        Function that creates plot like fig 3 in the lecture notes
+
+        input:
+        - num_sweeps (int): number of spin MC steps to take (in sweeps!!) 
+        - spins (list, optional): if we have list of generated spin configurations, we can skip the generation of the spin lattices
+
+        output: 
+        - plot of the magnetization, with the exact magnetization plotted as a baseline
+        '''
+        N = self.size
+        N2 = self.size**2
+        num_samples = num_sweeps*N2
+
+        if spins == []:
+            # generate num_samples spin configurations with desired algorithm
