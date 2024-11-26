@@ -15,7 +15,7 @@ class IsingModel:
     - sampling_method (str): The method of sampling ("uniform" for now).
     """
     
-    def __init__(self, size, J=1, h=0, boundary_condition="helical", sampling_method="uniform"):
+    def __init__(self, size, J=1, h=0, T=1, boundary_condition="helical", sampling_method="uniform"):
         """
         Initialize the Ising model.
         
@@ -32,6 +32,8 @@ class IsingModel:
         self.size = size
         self.J = J
         self.h = h
+        self.T = T
+        self.kB = 1 #e-23, we set this to 1 to have illustrate the behaviour nicely and don't have to be concerned around precision and such
         self.boundary_condition = boundary_condition
         self.sampling_method = sampling_method
     
@@ -165,7 +167,19 @@ class IsingModel:
 
         elif self.sampling_method == 'hit and miss':
             energies = []
-            raise NotImplementedError
+            N = self.size
+            N2 = self.size**2
+            ground_state = -2*N2
+            
+            for _ in range(num_samples):
+                spins = self.initialize_spins()
+                beta = 1/(self.kB*self.T)
+                E = self.calculate_energy(spins)
+                r = np.random.uniform(0, 1, 1)
+                Boltzmann_factor = np.exp(-beta*(E-ground_state))
+                if r <= Boltzmann_factor:
+                    energies.append(E)
+
 
     def energy_normalized(self, energies):
         '''
@@ -214,12 +228,14 @@ class IsingModel:
         Output:
         - figure
         '''
-
+        
         fig, ax = plt.subplots(1,1, figsize=(8,6))
         title= 'Histogram of sampled energy, J = '+str(self.J)
-        ax.hist(energies, bins=bins)
-        if normalize:
-            return NotImplementedError
+        if normalize == False:
+            ax.hist(energies, bins=bins)
+        if normalize == True:
+            energies_norm = self.energy_normalized(energies)
+            ax.hist(energies, bins=bins)
             ax.setylabel('Normalized counts', fontsize=14)
         ax.set_xlabel('Sampled energy [ J ]')
         ax.set_ylabel('Counts', fontsize=14)
