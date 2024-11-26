@@ -1,5 +1,5 @@
 import numpy as np
-import matplolib.pyplot as plt
+import matplotlib.pyplot as plt
 import pandas as pd
 import scipy as sp
 
@@ -80,10 +80,10 @@ class IsingModel:
             N = self.size
             N2 = N**2
             neighbours = [
-                [i, (j+1+N)%N]       # right neighbour
-                [i, (j-1+N)%N]       # left neighbour
-                [(i-1+N)%N, j]       # below neighbour
-                [(i+1+N)%N, j]       # Above neighbour
+                [i, int((j+1+N)%N)]       # right neighbour
+                [i, int((j-1+N)%N)]       # left neighbour
+                [int((i-1+N)%N), j]       # below neighbour
+                [int((i+1+N)%N), j]       # Above neighbour
             ]
             return neighbours
     
@@ -130,8 +130,8 @@ class IsingModel:
         - energies (list of float): Energies of the sampled configurations.
         """
 
-        if self.sampling_method != "uniform" or 'metropolis' or 'hit and miss':
-            raise NotImplementedError(f"Sampling method '{self.sampling_method}' is not implemented.")
+        # if self.sampling_method != "uniform" or 'metropolis' or 'hit and miss':
+            # raise NotImplementedError(f"Sampling method '{self.sampling_method}' is not implemented.")
 
         # Implement uniform sampling method
         if self.sampling_method == 'uniform':
@@ -162,7 +162,8 @@ class IsingModel:
                     if r > Boltzmann_factor:
                         # flip the spin at place i again.
                         spins[i] = spins[i]*(-1)
-                energies.append(energy)
+                        energies.append(E_old)
+                    else: energies.append(E_new)
             return energies
 
         elif self.sampling_method == 'hit and miss':
@@ -192,8 +193,8 @@ class IsingModel:
         - spins (list of arrays): sampled spin configurations.
         """
 
-        if self.sampling_method != "uniform" or 'metropolis' or 'hit and miss':
-            raise NotImplementedError(f"Sampling method '{self.sampling_method}' is not implemented.")
+        # if self.sampling_method != "uniform" or 'metropolis' or 'hit and miss':
+            # raise NotImplementedError(f"Sampling method '{self.sampling_method}' is not implemented.")
 
         # Implement uniform sampling method
         if self.sampling_method == 'uniform':
@@ -252,7 +253,7 @@ class IsingModel:
         Returns:
         - array with energy per bond
         '''
-        return energies/(2*self.size**2)
+        return np.asarray(energies)/(2*self.size**2)
 
     def visualize_energy(self, energies):
         '''
@@ -296,8 +297,8 @@ class IsingModel:
                 ax.hist(energies, bins=bins)
                 ax.set_ylabel('Counts', fontsize=14)
             if normalize == True:
-                energies_norm = self.energy_normalized(energies)
-                ax.hist(energies_norm, bins=bins)
+                # energies_norm = self.energy_normalized(energies)
+                ax.hist(energies, bins=bins, density=True, label='normalized density')
                 mu = np.sum(energies)/len(energies)
                 sigma = np.std(energies)
                 energy_min = np.min(energies)
@@ -305,7 +306,7 @@ class IsingModel:
                 energy_array = np.linspace(energy_min, energy_max, 1000)
                 gaussian = sp.stats.norm.pdf(energy_array, loc=mu, scale=sigma)
                 ax.plot(energy_array, gaussian, color='red', label='Normal distribution')
-
+                ax.legend()
                 ax.set_ylabel('Normalized counts', fontsize=14)
             ax.set_xlabel('Sampled energy [ J ]')
             ax.set_title(title, fontsize=1)
@@ -390,7 +391,6 @@ class IsingModel:
         else:
             # calculate magnetizatio for each of the given spin configurations
             magnetizations = np.add(magnetizations, self.get_magnetization(spins))
-
         fig, ax = plt.subplots(1,1, figsize=(10, 7))
         sweeps = np.lnspace(0, num_samples, num_samples)/N2
         ax.plot(sweeps, magnetizations, color='red', alpha=0.7, label='Sampled magnetizations')
