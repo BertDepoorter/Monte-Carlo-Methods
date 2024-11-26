@@ -206,7 +206,7 @@ class IsingModel:
 
         # Implement Metropolis algorithm 
         elif self.sampling_method == 'metropolis':
-            spins_sampled = np.asarray([])
+            spins_sampled = np.zeros(100)
             spins = self.initialize_spins()
             for _ in range(num_samples):
                 if self.boundary_condition != 'helical':
@@ -361,7 +361,7 @@ class IsingModel:
         - exact magnetization value
         '''
 
-        M = np.sqrt(np.sqrt(np.sqrt(1-np.sinh(2*self.J/self.T)**(-4))))
+        M = (1-np.sinh(2*self.J/self.T)**(-4))**(1/8)
         return M
 
     def plot_magnetization(self, num_sweeps, spins=[]):
@@ -382,7 +382,7 @@ class IsingModel:
         N = self.size
         N2 = self.size**2
         num_samples = num_sweeps*N2
-        M_exact = self.get_exact_magnetization
+        M_exact = self.get_exact_magnetization()
         magnetizations = np.zeros(num_samples)
         if spins == []:
             # generate num_samples spin configurations with desired algorithm
@@ -392,13 +392,14 @@ class IsingModel:
             # calculate magnetizatio for each of the given spin configurations
             magnetizations = np.add(magnetizations, self.get_magnetization(spins))
         fig, ax = plt.subplots(1,1, figsize=(10, 7))
-        sweeps = np.lnspace(0, num_samples, num_samples)/N2
+        sweeps = np.linspace(0, num_samples, num_samples)/N2
         ax.plot(sweeps, magnetizations, color='red', alpha=0.7, label='Sampled magnetizations')
-        ax.hline(M_exact, color='black', alpha=0.7, linestyle='dashed')
+        ax.axhline(M_exact, color='black', alpha=0.7, linestyle='dashed', label='Exact Magnetization')
+        print(M_exact)
         ax.set_xlabel('Sweeps', fontsize=14)
         ax.set_ylabel('Magnetization', fontsize=14)
         fig.suptitle('Metropolis algorithm', fontsize=20)
         subtitle = 'T = '+str(self.T)+' , N = ' + str(self.size)
-        fig.title(subtitle, fontsize=17)
+        ax.set_title(subtitle, fontsize=17)
         ax.legend()
         plt.show()
