@@ -146,24 +146,42 @@ class IsingModel:
         elif self.sampling_method == 'metropolis':
             energies = []
             spins = self.initialize_spins()
+            E0 = self.calculate_energy(spins)
+            energies.append(E0)
+            beta = 1/(self.kB*self.T)
+            # Calculate Boltzmann factors
+            Boltzmann_factors = {
+                8.0: float(np.exp(-beta*8.0)),
+                4.0: float(np.exp(-beta*4.0)),
+                0.0: float(np.exp(-beta*0.0)),
+                -4.0: float(np.exp(-beta*(-4.0))),
+                -8.0: float(np.exp(-beta*(-8.0)))
+            }
+            print(Boltzmann_factors)
             for _ in range(num_samples):
                 if self.boundary_condition != 'helical':
                     raise NotImplementedError
                 i = np.random.randint(0, self.size**2, 1)
-                spin = spins[i]
-                E_old = self.calculate_energy(spins)
-                spins[i] = spins[i]*(-1)
-                E_new = self.calculate_energy(spins)
-                delta_E = E_new - E_old
+                neighbours = self.get_neighbors([i])
+                delta_E = self.calculate_energy_difference_light(spins, i, neighbours)
                 if delta_E >0:
                     r = np.random.uniform(0,1, 1)
-                    beta = 1/(self.kB*self.T)
-                    Boltzmann_factor = np.exp(-beta*delta_E)
-                    if r > Boltzmann_factor:
-                        # flip the spin at place i again.
+                    if r <= Boltzmann_factors[float(delta_E)]:
+                        # accept the spin flip, so we multiply the selected spin with -1
                         spins[i] = spins[i]*(-1)
-                        energies.append(E_old)
-                    else: energies.append(E_new)
+                        E_new = energies[-1]+delta_E
+                        print(type(E_new))
+                        energies.append(float(E_new))
+                    else:
+                        # add previous energy value again
+                        E_new = energies[-1]
+                        energies.append(float(E_new))
+                else:
+                    # Accept the spin flip
+                    spins[i] = spins[i]*(-1)
+                    E_new = energies[-1]+delta_E
+                    print
+                    energies.append(float(E_new))
             return energies
 
         elif self.sampling_method == 'hit and miss':
@@ -208,21 +226,30 @@ class IsingModel:
         elif self.sampling_method == 'metropolis':
             spins_sampled = np.zeros(100)
             spins = self.initialize_spins()
+            beta = 1/(self.kB*self.T)
+            # Calculate Boltzmann factors
+            Boltzmann_factors = {
+                8.0: np.exp(-beta*8.0),
+                4.0: np.exp(-beta*4.0),
+                0.0: np.exp(-beta*0.0),
+                -4.0: np.exp(-beta*(-4.0)),
+                -8.0: np.exp(-beta*(-8.0))
+            }
+
             for _ in range(num_samples):
                 if self.boundary_condition != 'helical':
                     raise NotImplementedError
                 i = np.random.randint(0, self.size**2, 1)
-                E_old = self.calculate_energy(spins)
-                spins[i] = spins[i]*(-1)
-                E_new = self.calculate_energy(spins)
-                delta_E = E_new - E_old
+                neighbours = self.get_neighbors([i])
+                delta_E = self.calculate_energy_difference_light(spins, i, neighbours)
                 if delta_E >0:
                     r = np.random.uniform(0,1, 1)
-                    beta = 1/(self.kB*self.T)
-                    Boltzmann_factor = np.exp(-beta*delta_E)
-                    if r > Boltzmann_factor:
-                        # flip the spin at place i again.
+                    if r <= Boltzmann_factors[float(delta_E)]:
+                        # accept the spin flip, so we multiply the selected spin with -1
                         spins[i] = spins[i]*(-1)
+                else:
+                    # Accept the spin flip
+                    spins[i] = spins[i]*(-1)
                 spins_sampled = np.vstack([spins_sampled, spins])
             return spins_sampled
 
@@ -242,6 +269,25 @@ class IsingModel:
                     spins_sampled = np.vstack([spins_sampled, spins])
             return spins_sampled
 
+    def calculate_energy_difference_light(self, spins, i, neighbours):
+        '''
+        Light calculation of the energy difference. This will be determined solely by the energies of the selected spin and its neighbours.
+
+        input: 
+        - spins (array): list of the spins 
+        - i (int): index of the selected spins
+        - neighbours: indices of the enighbouring spins
+
+        output:
+        - energy difference (after multiplication with J)
+        '''
+
+        E_old = 0
+        s = spins[i]
+        for neighbour in neighbours:
+            E_old -= s*spins[neighbour]
+        E_new = -E_old
+        return (E_new-E_old)*self.J
 
     def energy_normalized(self, energies):
         '''
@@ -342,13 +388,13 @@ class IsingModel:
         output:
         - Total magnetization of each of the spin configurations
         '''
-        M = np.zeros(len(spins))
+        M = []
         N2= self.size**2
         for k in range(len(spins)):
             print('shape of element in spin_samples: ', spins[k].shape, type(spins[k]))
             M_sample = 1/N2*np.sum(spins[k])
             M.append(M_sample)
-        return M
+        return np.asarray(M)
 
     def get_exact_magnetization(self):
         '''
@@ -405,7 +451,8 @@ class IsingModel:
             magnetizations = np.add(magnetizations, self.get_magnetization(spins))
             ax.plot(sweeps, magnetizations, color='red', alpha=0.7, label='Sampled magnetizations')
 
-        ax.axhline(M_exact, color='black', alpha=0.7, linestyle='dashed', label='Exact Magnetization')
+        ax.axhline(M_exact, color='black', alpha=0.7, linestyle='dashed', label='Exact Magnetization (plus)')
+        ax.axhline(-M_exact, color='black', alpha=0.7, linestyle='dashed', label='Exact Magnetization (min)')
         print(M_exact)
         ax.set_xlabel('Number of MC sweeps', fontsize=14)
         ax.set_ylabel('Magnetization', fontsize=14)
@@ -435,3 +482,4 @@ class IsingModel:
             chi += (magnetizations[s]-average_m)*(magnetizations[s+t]-average_m)
         chi = chi/tf
         return chi
+
