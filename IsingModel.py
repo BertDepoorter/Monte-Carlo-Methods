@@ -276,32 +276,60 @@ class IsingModel:
         plt.tight_layout()
         plt.show()
 
-    def make_histogram(self, energies, bins=25, normalize=False):
+    def make_histogram(self, energies, bins=25, normalize=False, magnetization=False):
         '''
-        Functionality to plot histogram of the sampled energies
+        Functionality to plot histogram of the sampled energies / magnetizations
 
         Input:
-        - energies (list): contains the energies of all sampled configurations
+        - energies_magnetizations (list): contains the energies or magnetizations of all sampled configurations
         - bins (int): how many bins for the histogram
         - normalize (bool): do we normalize the data or not. Default is False. 
                 If True, we also plot gaussian distribution arond mean of samples 
         
         Output:
-        - histogram of the sampled energies
+        - histogram of the sampled energies or magnetizations
         '''
-        
-        fig, ax = plt.subplots(1,1, figsize=(8,6))
-        title= 'Histogram of sampled energy, J = '+str(self.J)
-        if normalize == False:
-            ax.hist(energies, bins=bins)
-        if normalize == True:
-            energies_norm = self.energy_normalized(energies)
-            ax.hist(energies_norm, bins=bins)
-            mu = 
-            ax.setylabel('Normalized counts', fontsize=14)
-        ax.set_xlabel('Sampled energy [ J ]')
-        ax.set_ylabel('Counts', fontsize=14)
-        ax.set_title(title, fontsize=1)
+        if magnetization == False:
+            fig, ax = plt.subplots(1,1, figsize=(8,6))
+            title= 'Histogram of sampled energy, J = '+str(self.J)
+            if normalize == False:
+                ax.hist(energies, bins=bins)
+                ax.set_ylabel('Counts', fontsize=14)
+            if normalize == True:
+                energies_norm = self.energy_normalized(energies)
+                ax.hist(energies_norm, bins=bins)
+                mu = np.sum(energies)/len(energies)
+                sigma = np.std(energies)
+                energy_min = np.min(energies)
+                energy_max = np.max(energies)
+                energy_array = np.linspace(energy_min, energy_max, 1000)
+                gaussian = sp.stats.norm.pdf(energy_array, loc=mu, scale=sigma)
+                ax.plot(energy_array, gaussian, color='red', label='Normal distribution')
+
+                ax.set_ylabel('Normalized counts', fontsize=14)
+            ax.set_xlabel('Sampled energy [ J ]')
+            ax.set_title(title, fontsize=1)
+
+        elif magnetization == True:
+            fig, ax = plt.subplots(1,1, figsize=(8,6))
+            title= 'Histogram of sampled magnetizations, J = '+str(self.J)
+            if normalize == False:
+                ax.hist(energies, bins=bins)
+                ax.set_ylabel('Counts', fontsize=14)
+            if normalize == True:
+                ax.hist(energies_norm, bins=bins, density=True)
+                mu = np.sum(energies)/len(energies)
+                sigma = np.std(energies)
+                energy_min = np.min(energies)
+                energy_max = np.max(energies)
+                energy_array = np.linspace(energy_min, energy_max, 1000)
+                gaussian = sp.stats.norm.pdf(energy_array, loc=mu, scale=sigma)
+                ax.plot(energy_array, gaussian, color='red', label='Normal distribution')
+
+                ax.set_ylabel('Normalized counts', fontsize=14)
+            ax.set_xlabel('Sampled magnetization [ J ]')
+            ax.set_title(title, fontsize=1)
+
 
     def get_magnetization(self, spins):
         '''
@@ -313,8 +341,11 @@ class IsingModel:
         output:
         - Total magnetization of the spin configuration
         '''
+        M = []
         N2= self.size**2
-        M = 1/N2*np.sum(spins)
+        for spin_conf in spins:
+            M_sample = 1/N2*np.sum(spin_conf)
+            M.append(M_sample)
         return M
 
     def get_exact_magnetization(self):
@@ -343,9 +374,31 @@ class IsingModel:
         output: 
         - plot of the magnetization, with the exact magnetization plotted as a baseline
         '''
+
+        if self.sampling_method != 'metropolis':
+            raise NotImplementedError
+
         N = self.size
         N2 = self.size**2
         num_samples = num_sweeps*N2
-
+        M_exact = self.get_exact_magnetization
+        magnetizations = np.zeros(num_samples)
         if spins == []:
             # generate num_samples spin configurations with desired algorithm
+            samples = self.sample_spin_configurations(num_samples)[1:]
+            magnetizations = np.add(magnetizations, self.get_magnetization(samples))
+        else:
+            # calculate magnetizatio for each of the given spin configurations
+            magnetizations = np.add(magnetizations, self.get_magnetization(spins))
+
+        fig, ax = plt.subplots(1,1, figsize=(10, 7))
+        sweeps = np.lnspace(0, num_samples, num_samples)/N2
+        ax.plot(sweeps, magnetizations, color='red', alpha=0.7, label='Sampled magnetizations')
+        ax.hline(M_exact, color='black', alpha=0.7, linestyle='dashed')
+        ax.set_xlabel('Sweeps', fontsize=14)
+        ax.set_ylabel('Magnetization', fontsize=14)
+        fig.suptitle('Metropolis algorithm', fontsize=20)
+        subtitle = 'T = '+str(self.T)+' , N = ' + str(self.size)
+        fig.title(subtitle, fontsize=17)
+        ax.legend()
+        plt.show()
