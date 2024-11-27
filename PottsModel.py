@@ -252,7 +252,26 @@ class PottsModel:
             spins[spin] = spin_proposed
         else:
             r = np.random.uniform(0,1, 1)
-            if False:
+            if r <= self.Boltzmann[int(delta_E/(-self.J))]:
+                # accept the spin flip
+                spins[spin] = spin_proposed
+            else:
+                # Reject spin flip, so do nothing
                 pass
+        return spins
+    
+    def get_magnetization(self, spins):
+        '''
+        Function that calculates the magnetization for a given spin configuration
+        
+        input:
+        - spins: array containing the lattice full of spins
 
+        output:
+         - magnetization (float): total magnetization of the lattice
+        '''
+        N2 = self.size**2
+        M = 1/N2*np.sum(spins)
+        return M
+    
     
