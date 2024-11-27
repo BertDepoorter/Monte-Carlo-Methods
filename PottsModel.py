@@ -166,7 +166,7 @@ class PottsModel:
     
     def _sample_heat_bath(self, spins):
         '''
-        Implement the heat bath algorithm for the Potts Model
+        Implement the heat bath algorithm for the Potts Model. Calling this function corresponds to a single spin flip
 
         input:
         - spins (array): array containing the spins
@@ -193,51 +193,66 @@ class PottsModel:
         '''
         Function that calculates the weights assigned to different spin picks
         Now the acceptance probablility is always one, but the selection probability is non-uniform for different states
+
+        input: 
+        - spins (array): current spin configuration
+        - spin (int): selected spin that we want to flip
+
+        output:
+        - weights (array): array containing the non-uniform weights assigned to the spin flip
         '''
         neighbours = self.get_neighbors(spin)
-        # get energy differences for 
-        E_old = self.calculate_energy(spins)
+        neighbour_spins = [spins[neighbour] for neighbour in neighbours]
+
+        
 
         weights = []
         for q in range(self.q):
-            neighbour_spins = [spins[neighbour] for neighbour in neighbours]
-            delta_E = 0
-            # get energy for nearest neighbours configuration
-            for i in range(4):
-                if float(neighbour_spins) == float(q):
-                    delta_E += -self.J
+            # Count energy connections
+            energy_connections = 0
+            for i in range(4): # loop over neighbour spins
+                if float(neighbour_spins[i]) == float(q):
+                    energy_connections += 1
             # get corresponding Boltzmann factor and add to weights
 
-            weights.append(float(delta_E))
-        weights = np.asarray(weights)/(self.q*self.size**2*sum(self.Boltzmann.values()))
+            weights.append(self.Boltzmann[energy_connections])
+        weights = np.asarray(weights)
+        weights = weights/(self.q*self.size**2*np.sum(weights))
         return weights
 
+    def _sample_metropolis(self, spins):
+        '''
+        Implement the heat bath algorithm for the Potts Model. Calling this function corresponds to a single spin flip
 
+        input:
+        - spins (array): array containing the spins
 
+        output:
+        - spins (array): the updated spin configuration with one heat bath step
+        '''
+        # choose spin to flip
+        spin = np.random.randint(0, self.size*2, 1)
+    
+        # Select randomly a new spin
+        spin_proposed = np.random.randint(self.q_values.remove(spins[spin]), 1)
 
+        # Run Monte_carlo;
+        #calculate energy difference
+        neighbours = self.get_neighbors(spin)
+        neighbour_spins = [spins[neighbour] for neighbour in neighbours]
+        connections_old = 0
+        connections_new = 0
+        for i in range(4):
+            if neighbour_spins[i] == spins[spin]:
+                connections_old += 1
+            if neighbour_spins[i] == spin_proposed:
+                connections_new += 1
+        delta_E = (connections_new-connections_old)*(-self.J)
+        if delta_E <= 0:
+            spins[spin] = spin_proposed
+        else:
+            r = np.random.uniform(0,1, 1)
+            if False:
+                pass
 
-
-    def _update_heat_bath(self):
-        """
-        Perform a single heat bath update on the lattice using precomputed Boltzmann factors.
-        """
-        L = self.L
-        for _ in range(L * L):  # Attempt to update each spin once on average
-            x, y = np.random.randint(0, L), np.random.randint(0, L)  # Random spin
-            neighbor_states = self._neighbor_states(x, y)
-            neighbor_count = np.zeros(self.q, dtype=int)  # Count occurrences of each spin state
-            
-            # Count neighbor contributions
-            for state in neighbor_states:
-                neighbor_count[state] += 1
-
-            # Calculate weights using precomputed Boltzmann factors
-            weights = [
-                self.boltzmann_factors[neighbor_count[s]] for s in range(self.q)
-            ]
-            weights = np.array(weights) / np.sum(weights)  # Normalize to form probabilities
-
-            # Sample a new spin state based on the probabilities
-            self.lattice[x, y] = np.random.choice(np.arange(self.q), p=weights)
-
-        
+    
