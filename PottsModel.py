@@ -138,7 +138,6 @@ class PottsModel:
         spins = self.initialize_spins()
         samples = np.asarray(spins)
         if self.sampling_method == 'heat bath':
-            Boltzmann_factors = self._precompute_boltzmann_factors()
             for _ in range(num_samples):
                 spins = self._sample_heat_bath(spins)
                 samples = np.vstack([samples, spins])
@@ -202,8 +201,6 @@ class PottsModel:
         '''
         neighbours = self.get_neighbors(spin)
         neighbour_spins = [spins[neighbour] for neighbour in neighbours]
-
-        
 
         weights = []
         for q in range(self.q):
@@ -341,7 +338,3 @@ class PottsModel:
         ax.set_title()
         fig.savefig('Plots/Magnetizations_Potts_model.png', dpi=300)
         ax.legend()
-
-
-
-        
