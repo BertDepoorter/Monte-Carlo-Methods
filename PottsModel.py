@@ -135,17 +135,16 @@ class PottsModel:
         - array of all sampled spin configurations
         '''
 
-        samples = []
         spins = self.initialize_spins()
-        samples = np.asarray(samples.append(spins))
+        samples = np.asarray(spins)
         if self.sampling_method == 'heat bath':
             Boltzmann_factors = self._precompute_boltzmann_factors()
             for _ in range(num_samples):
-                spins = self._sample_heat_bath(spins, Boltzmann_factors)
+                spins = self._sample_heat_bath(spins)
                 samples = np.vstack([samples, spins])
         elif self.sampling_method == 'metropolis':
             for _ in range(num_samples):
-                spins = self._update_metropolis(spins)
+                spins = self._sample_metropolis(spins)
                 samples = np.vstack([samples, spins])
         else:
             raise ValueError("Invalid method. Choose either 'heat_bath' or 'metropolis'.")
@@ -217,7 +216,10 @@ class PottsModel:
 
             weights.append(self.Boltzmann[energy_connections])
         weights = np.asarray(weights)
-        weights = weights/(self.q*self.size**2*np.sum(weights))
+        weights = weights/(np.sum(weights))
+        # In notes this states that we need to divide with q*M, where M is total number of spins in the lattice
+        # However this does not result in weights that sum to 1.
+    
         return weights
 
     def _sample_metropolis(self, spins):
@@ -274,4 +276,72 @@ class PottsModel:
         M = 1/N2*np.sum(spins)
         return M
     
-    
+    def magnetization_chain(self, chain):
+        '''
+        Calculate the magnetization of certain number of spin samples
+
+        input: 
+        - chain: array containing the different spin configurations
+
+        output:
+        - magnetization array with all magnetizations for the different spin configurations
+        '''
+        num_samples = len(chain)
+        magnetizations = np.zeros(num_samples)
+        for i in range(num_samples):
+            magnetizations[i] += self.get_magnetization(chain[i])
+        return magnetizations
+
+
+    def plot_magnetizations(self, num_samples, chains=1, spin_samples=[], chain_labels=None):
+        '''
+        Function to make a plot of the magnetization of the spin lattice
+
+        input:
+        - num_samples(int): number of spin configurations to sample
+        - chains (int, optional): number of MC chains to run. 
+            Default is one.
+        - spin_samples (array of array of arrays, optional): optional argument to apply plotting functionality on an already sampled set of spin configurations
+            dimension should be 3: 1st dimension are the different chains, 2nd dimension is the array containing the different spin configurations (also arrays) in each chain.
+        - chain_labels: list of chain labels. These contain the labels to assign to the different chains we put in
+
+        output:
+        - Plot of the magetizations
+        '''
+
+        # Sample chains if not specified
+        fig, ax = plt.subplots(1,1, figsize=(10,7))
+
+        if spin_samples == []:
+            sweeps = np.linspace(0, num_samples, num_samples)/self.size**2 #array for number of sweeps
+            for chain in range(chains):
+                new_chain = self.sample_spin_configurations(num_samples)
+                magnetizations = self.magnetization_chain(new_chain)
+                label = 'Chain '+str(chain)
+                ax.plot(sweeps, magnetizations, label=label)
+        else:
+            if spin_samples.ndim != 3:
+                return ValueError
+            else: 
+                for i in range(len(spin_samples)):
+                    # get magnetizations for each chain
+                    num_samples = len(spin_samples[i])
+                    sweeps = np.linspace(0, num_samples, num_samples)/self.size**2 #array for number of sweeps
+                    magnetizations = np.zeros(spin_samples[i])
+                    for k in range(len(spin_samples[i])):
+                        magnetizations[k] += self.get_magnetization(spin_samples[i][k])
+                    # Plot magnetization of this chain
+                    if chain_labels == None:
+                        return ValueError
+                    ax.plot(sweeps, magnetizations, label=chain_labels[i])
+        
+        ax.set_xlabel('MC sweeps (MC steps per lattice site)', fontsize=14)
+        ax.set_ylabel('Magnetization', fontsize=14)
+        fig.suptitle('Magnetization for '+str(self.q)+'-dimensional Potts Model', fontsize=20)
+        ax.set_title()
+        fig.savefig('Plots/Magnetizations_Potts_model.png', dpi=300)
+        ax.legend()
+
+
+
+        
