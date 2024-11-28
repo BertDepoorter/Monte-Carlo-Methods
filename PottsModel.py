@@ -232,8 +232,10 @@ class PottsModel:
         # choose spin to flip
         spin = np.random.randint(0, self.size*2, 1)
     
-        # Select randomly a new spin
-        spin_proposed = np.random.randint(self.q_values.remove(spins[spin]), 1)
+        # Select randomly a new spin, exclude own value
+        spin_proposed =spins[spin]
+        while spin_proposed == spins[spin]:
+            spin_proposed = np.random.choice(self.q_values, 1)
 
         # Run Monte_carlo;
         #calculate energy difference
@@ -251,7 +253,7 @@ class PottsModel:
             spins[spin] = spin_proposed
         else:
             r = np.random.uniform(0,1, 1)
-            if r <= self.Boltzmann[int(delta_E/(-self.J))]:
+            if r <= self.Boltzmann[int(delta_E/(self.J))]:
                 # accept the spin flip
                 spins[spin] = spin_proposed
             else:
@@ -322,9 +324,9 @@ class PottsModel:
             else: 
                 for i in range(len(spin_samples)):
                     # get magnetizations for each chain
-                    num_samples = len(spin_samples[i])
-                    sweeps = np.linspace(0, num_samples, num_samples)/self.size**2 #array for number of sweeps
-                    magnetizations = np.zeros(spin_samples[i])
+                    length = len(spin_samples[i])
+                    sweeps = np.linspace(0, length, length)/self.size**2 #array for number of sweeps
+                    magnetizations = np.zeros(len(spin_samples[i]))
                     for k in range(len(spin_samples[i])):
                         magnetizations[k] += self.get_magnetization(spin_samples[i][k])
                     # Plot magnetization of this chain
@@ -335,6 +337,6 @@ class PottsModel:
         ax.set_xlabel('MC sweeps (MC steps per lattice site)', fontsize=14)
         ax.set_ylabel('Magnetization', fontsize=14)
         fig.suptitle('Magnetization for '+str(self.q)+'-dimensional Potts Model', fontsize=20)
-        ax.set_title()
+        ax.set_title('N = '+str(self.size)+', J = '+str(self.J)+', sample size = '+str(num_samples))
         fig.savefig('Plots/Magnetizations_Potts_model.png', dpi=300)
         ax.legend()

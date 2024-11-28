@@ -45,6 +45,14 @@ class EvolutionGillespie:
         if initial == []:
             init = self.initialize()
 
+        # call Gillespie step
+
+
+    def _update_gillespie(self, state, time): 
+        '''
+        
+        '''
+
 
     def initialize(self):
         '''
