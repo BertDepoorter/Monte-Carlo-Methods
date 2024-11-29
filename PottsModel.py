@@ -338,5 +338,6 @@ class PottsModel:
         ax.set_ylabel('Magnetization', fontsize=14)
         fig.suptitle('Magnetization for '+str(self.q)+'-dimensional Potts Model', fontsize=20)
         ax.set_title('N = '+str(self.size)+', J = '+str(self.J)+', sample size = '+str(num_samples))
-        fig.savefig('Plots/Magnetizations_Potts_model.png', dpi=300)
         ax.legend()
+        fig.savefig('Plots/Magnetizations_Potts_model.png', dpi=300)
+        
