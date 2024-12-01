@@ -50,7 +50,7 @@ class HardDisks:
                     grid[i,j] += np.asarray([i, j]*dist)
             return grid
         elif self.initial_conf == 'random':
-            grid = np.zeros(,2)
+            grid = np.zeros(2)
             for i in range(self.N):    #assign each particle a random position
                 x = np.random.uniform(0, L, 1)
                 y = np.random.uniform(0, L, 1)
