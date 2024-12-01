@@ -65,7 +65,7 @@ class EvolutionGillespie:
 
             # Time until next reaction
             tau = np.random.exponential(1 / total_propensity)
-
+            
             # Choose which reaction occurs
             reaction_index = np.random.choice(
                 len(propensities), p=np.array(propensities) / total_propensity
@@ -97,4 +97,26 @@ class EvolutionGillespie:
         plt.title(self.title)
         plt.legend()
         plt.grid()
+        plt.show()
+
+    def plot_species_against_each_other(self, populations, species1, species2):
+        '''
+        Function that plots two populations against each other. 
+        We have no time axis, we plot species 1 on the x-axis and species 2 on the y-axis
+
+        input: 
+        - populations (list of lists): Populations of each species at each time point.
+        - species1 (int): Index of the first species to plot.
+        - species2 (int): Index of the second species to plot.
+        '''
+        fig, ax = plt.subplots(1,1, figsize=(7,7))
+        populations = np.array(populations)
+        ax.plot(populations[:, species1], populations[:, species2], color='red', label='Trajectory of populations')
+        ax.scatter(populations[0, species1], populations[0, species2], s=50, color='black', label='Starting point')
+        ax.scatter(populations[-1, species1], populations[-1, species2], s=50, color='blue', label='End point')
+        ax.set_xlabel('Species 1', fontsize=14)
+        ax.set_ylabel('Species 2', fontsize=14)
+        ax.set_title(self.title, fontsize=20)
+        ax.legend()
+        fig.savefig('PLots/ex_Gillespie_'+self.title+'.png', dpi=300)
         plt.show()
