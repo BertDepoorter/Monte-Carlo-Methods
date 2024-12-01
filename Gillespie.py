@@ -97,6 +97,7 @@ class EvolutionGillespie:
         plt.title(self.title)
         plt.legend()
         plt.grid()
+        plt.savefig('PLots/ex_Gillespie_'+self.title+'.png', dpi=300)
         plt.show()
 
     def plot_species_against_each_other(self, populations, species1, species2):
@@ -118,5 +119,5 @@ class EvolutionGillespie:
         ax.set_ylabel('Species 2', fontsize=14)
         ax.set_title(self.title, fontsize=20)
         ax.legend()
-        fig.savefig('PLots/ex_Gillespie_'+self.title+'.png', dpi=300)
+        fig.savefig('PLots/ex_Gillespie_noTime_'+self.title+'.png', dpi=300)
         plt.show()
