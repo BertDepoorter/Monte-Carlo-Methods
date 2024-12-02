@@ -44,7 +44,7 @@ class HardDisks:
             if side**2 != self.N:
                 raise ValueError("For 'rectangular' configuration, N must be a perfect square.")
             grid = []
-            spacing = self.L / (side-1)  # Distance between particles in the grid
+            spacing = self.L / (side)  # Distance between particles in the grid
             for i in range(side):
                 for j in range(side):
                     grid.append([i * spacing, j * spacing])
@@ -80,19 +80,12 @@ class HardDisks:
         return np.sqrt((delta**2).sum())
 
     def is_valid_move(self, new_position, particle_index):
-        '''
-        Check if a proposed move is valid (i.e., does not cause overlap).
-
-        input:
-        - new_position (array): Proposed new position of the particle (shape: (2,))
-        - particle_index (int): Index of the particle being moved
-
-        output:
-        - valid (bool): True if move is valid, False otherwise
-        '''
         for i, pos in enumerate(self.positions):
-            if i != particle_index:  # Exclude self-check
-                if self.get_distance(new_position, pos) < 2 * self.sigma:
+            if i != particle_index:
+                # Compute distance with periodic boundary conditions
+                distance = np.linalg.norm((new_position - pos + self.L / 2) % self.L - self.L / 2)
+                if distance < self.sigma:  # Assuming self.sigma is the particle diameter
+                    print(f"Move rejected: Overlap detected. Particle {particle_index} with {i}, Distance: {distance:.3f}")
                     return False
         return True
 
@@ -190,3 +183,51 @@ class HardDisks:
                 # add to acceptances
                 accepted += 1
         return accepted/steps
+        
+
+    def pair_correlation(self, bins=100, r_max=None):
+        '''
+        Compute the pair correlation function.
+
+        input:
+        - bins (int): Number of bins for the histogram
+        - r_max (float): Maximum distance for the correlation function (default: L/2)
+
+        output:
+        - r (array): Radial distances
+        - g(r) (array): Pair correlation function values
+        '''
+        if r_max is None:
+            r_max = self.L / 2
+
+        distances = []
+        for i in range(self.N):
+            for j in range(i + 1, self.N):
+                dist = self.get_distance(self.positions[i], self.positions[j])
+                distances.append(dist)
+
+        distances = np.array(distances)
+        hist, edges = np.histogram(distances, bins=bins, range=(0, r_max))
+        dr = edges[1] - edges[0]
+        r = edges[:-1] + dr / 2
+
+        # Normalize g(r)
+        area = np.pi * ((edges[1:]**2) - (edges[:-1]**2))
+        density = self.N / (self.L**2)
+        g_r = hist / (area * density * self.N)
+
+        return r, g_r
+
+    def plot_pair_correlation(self, bins=100, r_max=None):
+        '''
+        Plot the pair correlation function.
+        '''
+        r, g_r = self.pair_correlation(bins=bins, r_max=r_max)
+        plt.figure()
+        plt.plot(r, g_r, label='Pair Correlation Function')
+        plt.xlabel('r')
+        plt.ylabel('g(r)')
+        plt.title('Pair Correlation Function')
+        plt.legend()
+        plt.show()
+
