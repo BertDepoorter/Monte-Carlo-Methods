@@ -89,16 +89,16 @@ class EvolutionGillespie:
         - species2 (int): Index of the second species to plot.
         """
         populations = np.array(populations)
-        plt.figure(figsize=(10, 6))
-        plt.plot(times, populations[:, species1], label=f"Species {species1}")
-        plt.plot(times, populations[:, species2], label=f"Species {species2}")
-        plt.xlabel("Time")
-        plt.ylabel("Population")
-        plt.title(self.title)
-        plt.legend()
-        plt.grid()
-        plt.savefig('PLots/ex_Gillespie_'+self.title+'.png', dpi=300)
-        plt.show()
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(times, populations[:, species1], label=f"Species {species1}")
+        ax.plot(times, populations[:, species2], label=f"Species {species2}")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Population")
+        ax.set_title(self.title)
+        ax.legend()
+        ax.grid()
+        fig.savefig('PLots/ex_Gillespie_'+self.title+'.png', dpi=300)
+        return fig, ax
 
     def plot_species_against_each_other(self, populations, species1, species2):
         '''
@@ -120,4 +120,4 @@ class EvolutionGillespie:
         ax.set_title(self.title, fontsize=20)
         ax.legend()
         fig.savefig('PLots/ex_Gillespie_noTime_'+self.title+'.png', dpi=300)
-        plt.show()
+        return fig, ax
