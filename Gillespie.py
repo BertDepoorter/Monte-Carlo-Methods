@@ -90,8 +90,8 @@ class EvolutionGillespie:
         """
         populations = np.array(populations)
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(times, populations[:, species1], label=f"Species {species1}")
-        ax.plot(times, populations[:, species2], label=f"Species {species2}")
+        ax.plot(times, populations[:, species1], label=f"Species {species1+1}")
+        ax.plot(times, populations[:, species2], label=f"Species {species2+1}")
         ax.set_xlabel("Time")
         ax.set_ylabel("Population")
         ax.set_title(self.title)
