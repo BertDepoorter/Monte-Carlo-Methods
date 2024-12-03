@@ -468,7 +468,7 @@ class IsingModel:
                 for k in range(num_samples):
                     # 1 metropolis step
                     spins = self.metropolis_step(spins)
-                    m = np.abs(self.get_magnetization_1_conf(spins))
+                    m = (self.get_magnetization_1_conf(spins))
                     magnetizations[k] = m
                 lab = 'Sampled magnetizations, chain '+str(i+1)
                 ax.plot(sweeps, magnetizations, alpha=0.7, label=lab)
