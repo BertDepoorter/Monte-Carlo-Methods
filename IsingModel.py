@@ -36,6 +36,14 @@ class IsingModel:
         self.kB = 1 #e-23, we set this to 1 to have illustrate the behaviour nicely and don't have to be concerned around precision and such
         self.boundary_condition = boundary_condition
         self.sampling_method = sampling_method
+        self.beta =  1/(self.kB*self.T)
+        self.B_factors = {
+                8.0: np.exp(-self.beta*8.0),
+                4.0: np.exp(-self.beta*4.0),
+                0.0: np.exp(-self.beta*0.0),
+                -4.0: np.exp(-self.beta*(-4.0)),
+                -8.0: np.exp(-self. beta*(-8.0))
+            }
     
     def initialize_spins(self):
         """
@@ -224,7 +232,7 @@ class IsingModel:
 
         # Implement Metropolis algorithm 
         elif self.sampling_method == 'metropolis':
-            spins_sampled = np.zeros(100)
+            spins_sampled = np.zeros(self.size**2)
             spins = self.initialize_spins()
             beta = 1/(self.kB*self.T)
             # Calculate Boltzmann factors
@@ -394,6 +402,20 @@ class IsingModel:
             M_sample = 1/N2*np.sum(spins[k])
             M.append(M_sample)
         return np.asarray(M)
+    
+    def get_magnetization_1_conf(self, spins):
+        '''
+        Function to calculate the total magnetization of a certain configuration of spins
+
+        input:
+        - spins (array): array containing all the generated spin configurations
+
+        output:
+        - Total magnetization of each of the spin configurations
+        '''
+        N2= self.size**2
+        M_sample = 1/N2*np.sum(spins)
+        return M_sample
 
     def get_exact_magnetization(self):
         '''
@@ -441,8 +463,13 @@ class IsingModel:
             # run several chains
             for i in range(chains):
                 # generate num_samples spin configurations with desired algorithm
-                samples = self.sample_spin_configurations(num_samples)[1:]
-                magnetizations = np.add(magnetizations, self.get_magnetization(samples))
+                magnetizations = np.zeros(num_samples)
+                spins = self.initialize_spins()
+                for k in range(num_samples):
+                    # 1 metropolis step
+                    spins = self.metropolis_step(spins)
+                    m = np.abs(self.get_magnetization_1_conf(spins))
+                    magnetizations[k] = m
                 lab = 'Sampled magnetizations, chain '+str(i+1)
                 ax.plot(sweeps, magnetizations, alpha=0.7, label=lab)
                 magnetizations = np.zeros(num_samples)
@@ -452,7 +479,7 @@ class IsingModel:
             ax.plot(sweeps, magnetizations, color='red', alpha=0.7, label='Sampled magnetizations')
 
         ax.axhline(M_exact, color='black', alpha=0.7, linestyle='dashed', label='Exact Magnetization (plus)')
-        ax.axhline(-M_exact, color='black', alpha=0.7, linestyle='dashed', label='Exact Magnetization (min)')
+        # ax.axhline(-M_exact, color='black', alpha=0.7, linestyle='dashed', label='Exact Magnetization (min)')
         print(M_exact)
         ax.set_xlabel('Number of MC sweeps', fontsize=14)
         ax.set_ylabel('Magnetization', fontsize=14)
@@ -487,3 +514,59 @@ class IsingModel:
         chi = chi/tf
         return chi
 
+    def fraction_hits(self, num_samples):
+        '''
+        Function that calculates the fraction of hits for the hit and miss method
+
+        input:
+        - num_sam (int): number of samples
+
+        output:
+        - fraction of hits (float)
+        '''
+
+        if self.sampling_method != 'hit and miss':
+            return NotImplementedError
+        
+        N = self.size
+        N2 = self.size**2
+        zeros= np.zeros(N2)
+        spins_sampled = np.vstack([zeros])
+        
+        ground_state = -2*N2
+        hits = 0
+        for _ in range(num_samples):
+            spins = self.initialize_spins()
+            beta = 1/(self.kB*self.T)
+            E = self.calculate_energy(spins)
+            r = np.random.uniform(0, 1, 1)
+            Boltzmann_factor = np.exp(-beta*(E-ground_state))
+            if r <= Boltzmann_factor:
+                spins_sampled = np.vstack([spins_sampled, spins])
+                hits += 1
+        return hits/num_samples
+    
+
+    def metropolis_step(self, spins):
+        '''
+        Function that takes a spin lattice, updates 1 metropolis step and then returns the new sample
+
+        input:
+        - spin configuration (array)
+
+        output:
+        - spin configuration (array)
+        '''
+        if self.sampling_method == 'metropolis':
+            i = np.random.randint(0, self.size**2, 1)
+            neighbours = self.get_neighbors([i])
+            delta_E = self.calculate_energy_difference_light(spins, i, neighbours)
+            if delta_E >0:
+                r = np.random.uniform(0,1, 1)
+                if r <= self.B_factors[float(delta_E)]:
+                    # accept the spin flip, so we multiply the selected spin with -1
+                    spins[i] = spins[i]*(-1)
+            else:
+                # Accept the spin flip
+                spins[i] = spins[i]*(-1)
+            return spins
