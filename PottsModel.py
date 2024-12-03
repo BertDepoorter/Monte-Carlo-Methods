@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
+
 import scipy as sp
 
 class PottsModel:
@@ -20,7 +20,7 @@ class PottsModel:
         default is 'metropolis'
     """
 
-    def __init__(self, size, q,  J=1, h=0, T=1, boundary_condition="helical", sampling_method="uniform"):
+    def __init__(self, size, q,  J=1, h=0, T=1, boundary_condition="helical", sampling_method="uniform", init_zero=False):
         """
         Initialize the Potts model.
         
@@ -45,6 +45,7 @@ class PottsModel:
         self.boundary_condition = boundary_condition
         self.sampling_method = sampling_method
         self.Boltzmann = self._precompute_boltzmann_factors()
+        self.init_zero = init_zero
 
         # create list with possible spin values
         r = 0
@@ -64,10 +65,14 @@ class PottsModel:
         output: 
         - N^2 array, with spins between 0 and q randomly assigned
         '''
-
-        N2 = self.size**2
-        spins  = np.random.choice(self.q_values, size=N2)
-        return spins
+        if self.init_zero == False:
+            N2 = self.size**2
+            spins  = np.random.choice(self.q_values, size=N2)
+            return spins
+        elif self.init_zero == True:
+            N2 = self.size**2
+            spins  = np.zeros(N2)
+            return spins
     
     def calculate_energy(self, spins):
         '''
