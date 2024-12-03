@@ -81,14 +81,14 @@ class PottsModel:
         '''
         E = 0
         for i in range(self.size**2):
-            neighbours = self.get_neighbours(i)
+            neighbours = self.get_neighbors(i)
             for neighbour in neighbours:
                 if spins[neighbour] == spins[i]:
                     E -= 1
         return E / 2
 
 
-    def get_neighbors(self, indices):
+    def get_neighbors(self, i):
         """
         Get the neighbors of a spin at index i using helical boundary conditions.
         
@@ -100,7 +100,6 @@ class PottsModel:
         """
 
         if self.boundary_condition == 'helical':
-            i = indices[0]
             N = self.size
             N2 = N**2
             neighbors = [
