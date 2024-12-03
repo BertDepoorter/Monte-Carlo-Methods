@@ -90,7 +90,11 @@ class PottsModel:
             for neighbour in neighbours:
                 if spins[neighbour] == spins[i]:
                     E -= 1
-        return E / 2
+        if self.sampling_method == 'metropolis':
+
+            return E 
+        else: 
+            return E/2
 
 
     def get_neighbors(self, i):
